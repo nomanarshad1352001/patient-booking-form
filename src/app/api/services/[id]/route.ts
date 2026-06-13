@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { services } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { dummyServices } from "@/lib/dummy-data";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const [svc] = await db.select().from(services).where(eq(services.id, id));
-  if (!svc) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(svc);
+  const service = dummyServices.find((item) => item.id === id);
+  if (!service) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(service);
 }
 
 export async function PUT(
@@ -19,13 +17,9 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = await req.json();
-  const [updated] = await db
-    .update(services)
-    .set({ ...body, updatedAt: new Date() })
-    .where(eq(services.id, id))
-    .returning();
-  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(updated);
+  const service = dummyServices.find((item) => item.id === id);
+  if (!service) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json({ ...service, ...body, updatedAt: new Date().toISOString() });
 }
 
 export async function DELETE(
@@ -33,6 +27,5 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  await db.delete(services).where(eq(services.id, id));
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, id });
 }

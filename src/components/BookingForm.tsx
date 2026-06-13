@@ -59,12 +59,35 @@ export function BookingForm({ clinic }: { clinic: ClinicData }) {
 
   return (
     <div className={cn(
-      "min-h-screen transition-colors duration-500",
-      isDark ? "bg-brand-950" : "bg-slate-50"
+      "relative min-h-screen overflow-hidden transition-colors duration-500",
+      isDark
+        ? "bg-[radial-gradient(circle_at_top_left,#312e81_0%,#1e1b4b_32%,#020617_100%)]"
+        : "bg-[radial-gradient(circle_at_top_left,#eef2ff_0%,#f8fafc_38%,#ecfeff_100%)]"
     )}>
-      <Header />
+      <div className="pointer-events-none absolute inset-0 opacity-30" style={{ backgroundImage: "url('/images/hero-bg.jpg')", backgroundSize: "cover", backgroundPosition: "center" }} />
+      <div className={cn("pointer-events-none absolute -left-24 top-40 h-72 w-72 rounded-full blur-3xl", isDark ? "bg-brand-500/20" : "bg-brand-300/40")} />
+      <div className={cn("pointer-events-none absolute -right-24 top-96 h-80 w-80 rounded-full blur-3xl", isDark ? "bg-teal-400/10" : "bg-teal-300/40")} />
+      <div className="relative z-10">
+        <Header />
 
       <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+        <section className={cn(
+          "mb-6 overflow-hidden rounded-3xl border p-5 shadow-xl backdrop-blur-md animate-slide-up",
+          isDark ? "border-white/10 bg-brand-950/55 shadow-black/20" : "border-white/80 bg-white/75 shadow-brand-100/60"
+        )}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className={cn("text-xs font-bold uppercase tracking-[0.2em]", isDark ? "text-teal-300" : "text-teal-600")}>Prototype booking flow</p>
+              <h2 className={cn("mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl", isDark ? "text-white" : "text-slate-950")}>{clinic.name}</h2>
+              <p className={cn("mt-2 max-w-xl text-sm leading-6", isDark ? "text-brand-200" : "text-slate-600")}>Choose a visit, enter patient details, and confirm the appointment in a polished, fully clickable dummy-data prototype.</p>
+            </div>
+            <div className={cn("grid grid-cols-3 gap-2 rounded-2xl p-2 text-center", isDark ? "bg-white/5" : "bg-white/70")}>
+              {["2 themes", "PL / EN", "CRUD"].map((label) => (
+                <div key={label} className={cn("rounded-xl px-3 py-2 text-xs font-bold", isDark ? "bg-brand-800/60 text-brand-100" : "bg-brand-50 text-brand-700")}>{label}</div>
+              ))}
+            </div>
+          </div>
+        </section>
         {/* Step 1: Visit Selection */}
         {step === 1 && (
           <div className="space-y-5 animate-slide-up">
@@ -218,6 +241,7 @@ export function BookingForm({ clinic }: { clinic: ClinicData }) {
           {t(locale, "admin")} →
         </a>
       </footer>
+      </div>
     </div>
   );
 }

@@ -1,80 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { bookings, timeSlots } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { dummyBookings, dummyClinic, dummySlots, type DummyBooking } from "@/lib/dummy-data";
+
+const prototypeBookings = dummyBookings;
 
 export async function GET(req: NextRequest) {
-  const clinicId = req.nextUrl.searchParams.get("clinicId");
   const status = req.nextUrl.searchParams.get("status");
+  const result = status
+    ? prototypeBookings.filter((booking) => booking.status === status)
+    : prototypeBookings;
 
-  const conditions = [];
-  if (clinicId) conditions.push(eq(bookings.clinicId, clinicId));
-  if (status) {
-    const validStatuses = ["pending", "confirmed", "cancelled", "completed", "payment_failed", "slot_taken"] as const;
-    const s = validStatuses.find((v) => v === status);
-    if (s) conditions.push(eq(bookings.status, s));
-  }
-
-  const all = await db
-    .select()
-    .from(bookings)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(bookings.createdAt))
-    .limit(100);
-
-  return NextResponse.json(all);
+  return NextResponse.json(
+    [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  );
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-
-  // Check slot availability first
-  const [slot] = await db
-    .select()
-    .from(timeSlots)
-    .where(eq(timeSlots.id, body.slotId));
+  const slot = dummySlots.find((item) => item.id === body.slotId);
 
   if (!slot) {
     return NextResponse.json({ error: "Slot not found", code: "SLOT_NOT_FOUND" }, { status: 404 });
   }
 
-  if (!slot.available) {
+  const alreadyBooked = prototypeBookings.some(
+    (booking) => booking.slotId === body.slotId && booking.status !== "cancelled"
+  );
+
+  if (alreadyBooked) {
     return NextResponse.json({ error: "Slot already taken", code: "SLOT_TAKEN" }, { status: 409 });
   }
 
-  // Mark slot as unavailable
-  await db
-    .update(timeSlots)
-    .set({ available: false })
-    .where(eq(timeSlots.id, body.slotId));
+  const now = new Date().toISOString();
+  const booking: DummyBooking = {
+    id: `BK-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+    clinicId: body.clinicId ?? dummyClinic.id,
+    specialistId: body.specialistId,
+    serviceId: body.serviceId,
+    slotId: body.slotId,
+    bookingFor: body.bookingFor ?? "myself",
+    patientFirstName: body.patientFirstName,
+    patientLastName: body.patientLastName,
+    patientEmail: body.patientEmail,
+    patientPhone: body.patientPhone,
+    patientDateOfBirth: body.patientDateOfBirth,
+    patientPesel: body.patientPesel,
+    payerFirstName: body.payerFirstName ?? null,
+    payerLastName: body.payerLastName ?? null,
+    payerEmail: body.payerEmail ?? null,
+    payerPhone: body.payerPhone ?? null,
+    mode: body.mode ?? "in_office",
+    notes: body.notes ?? null,
+    status: "confirmed",
+    totalGrosze: body.totalGrosze ?? slot.priceGrosze,
+    currency: body.currency ?? slot.currency,
+    locale: body.locale ?? "pl",
+    createdAt: now,
+    updatedAt: now,
+  };
 
-  // Create booking
-  const [booking] = await db
-    .insert(bookings)
-    .values({
-      clinicId: body.clinicId,
-      specialistId: body.specialistId,
-      serviceId: body.serviceId,
-      slotId: body.slotId,
-      bookingFor: body.bookingFor || "myself",
-      patientFirstName: body.patientFirstName,
-      patientLastName: body.patientLastName,
-      patientEmail: body.patientEmail,
-      patientPhone: body.patientPhone,
-      patientDateOfBirth: body.patientDateOfBirth,
-      patientPesel: body.patientPesel,
-      payerFirstName: body.payerFirstName,
-      payerLastName: body.payerLastName,
-      payerEmail: body.payerEmail,
-      payerPhone: body.payerPhone,
-      mode: body.mode || "in_office",
-      notes: body.notes,
-      status: "confirmed",
-      totalGrosze: body.totalGrosze || 0,
-      currency: body.currency || "PLN",
-      locale: body.locale || "pl",
-    })
-    .returning();
-
+  prototypeBookings.unshift(booking);
   return NextResponse.json(booking, { status: 201 });
 }
